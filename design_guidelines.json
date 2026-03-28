@@ -1,0 +1,120 @@
+{
+  "theme": "dark",
+  "archetype": "5 (Jewel & Luxury)",
+  "design_philosophy": {
+    "core_principles": [
+      "Cinematic darkness with intentional light",
+      "Sophisticated serif typography meets minimal geometric sans",
+      "Tactile depth over flat surfaces (grain, subtle glowing borders)",
+      "High contrast for legibility, low contrast for atmosphere"
+    ],
+    "mood": "Exclusive, premium, moody, sophisticated, curated."
+  },
+  "colors": {
+    "background": {
+      "main": "#0a0a0a",
+      "surface": "#141414",
+      "surface_elevated": "#1a1a1a"
+    },
+    "text": {
+      "primary": "#fdfcf0",
+      "secondary": "#a1a1aa",
+      "muted": "#71717a",
+      "accent": "#d4af37"
+    },
+    "brand": {
+      "primary": "#d4af37",
+      "primary_hover": "#b5952f",
+      "secondary": "#5c1b1e",
+      "border": "rgba(255, 255, 255, 0.1)"
+    }
+  },
+  "typography": {
+    "headings": {
+      "font_family": "Playfair Display, serif",
+      "weights": ["400", "600", "700"],
+      "styles": "tracking-tight, elegant, used for hero and section headers. Sometimes use italics for sophisticated emphasis."
+    },
+    "body": {
+      "font_family": "Manrope, sans-serif",
+      "weights": ["300", "400", "500"],
+      "styles": "clean, highly legible, modern."
+    },
+    "accents": {
+      "font_family": "Playfair Display, serif",
+      "styles": "tracking-[0.2em] uppercase text-xs for overlines and labels."
+    }
+  },
+  "spacing_and_layout": {
+    "spacing_scale": "Generous (p-8, p-12, p-16, py-24). Allow the dark backgrounds to breathe.",
+    "grid_system": "Asymmetrical bento for marketing, strict 3/4 column control room for admin dashboard.",
+    "container_max_width": "max-w-7xl mx-auto"
+  },
+  "surfaces_and_components": {
+    "cards": "Dark surfaces (#141414) with subtle 1px border (border-white/10). No large drop shadows, rely on borders and inner glow.",
+    "glassmorphism": "Used for sticky header and modals. backdrop-blur-xl bg-black/60 border-b border-white/10.",
+    "buttons": {
+      "primary": "Solid gold (bg-[#d4af37] text-black hover:bg-[#b5952f] transition-all duration-300 rounded-sm)",
+      "secondary": "Outline gold or outline white/20 with white text on hover.",
+      "ghost": "Text only with gold underline on hover."
+    },
+    "inputs": "Shadcn standard but styled dark: bg-[#0a0a0a] border-white/20 focus:border-[#d4af37] text-white."
+  },
+  "motion": {
+    "transitions": "Slow, deliberate, elegant. transition-all duration-500 ease-out.",
+    "hover_states": "Images slightly scale up (scale-105) within hidden overflow containers. Buttons fade colors smoothly.",
+    "scroll": "Smooth scrolling with Lenis recommended. Reveal animations for sections."
+  },
+  "media": {
+    "hero_background": {
+      "url": "https://images.unsplash.com/photo-1647101734210-ff5d79813069?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2ODh8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGRhcmslMjBnb2xkJTIwdGV4dHVyZXxlbnwwfHx8fDE3NzQ3Mjk4MDd8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Abstract dark gold swirl, perfect for moody, ultra-premium landing hero overlay",
+      "placement": "Hero section background, optionally layered with black/60 gradient"
+    },
+    "tasting_kits": [
+      {
+        "url": "https://images.pexels.com/photos/34335270/pexels-photo-34335270.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Close up red wine poured into glass, dark background",
+        "placement": "Featured Tasting Kits section (Wine Pack)"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1769734416095-30fbc03e7bb7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDJ8MHwxfHNlYXJjaHwxfHx3aGlza2V5JTIwZ2xhc3MlMjBkYXJrJTIwbW9vZHxlbnwwfHx8fDE3NzQ3Mjk4MDR8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Whiskey glass dark mood",
+        "placement": "Featured Tasting Kits section (Spirits Pack)"
+      }
+    ],
+    "community_events": [
+      {
+        "url": "https://images.pexels.com/photos/8775199/pexels-photo-8775199.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "People enjoying wine tasting",
+        "placement": "Upcoming Events / Foxhound Packs header"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1765850257843-aa029ab7769c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjB3aW5lJTIwY2VsbGFyJTIwZGFya3xlbnwwfHx8fDE3NzQ3Mjk4MDJ8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Rows of dark glass wine bottles stacked on shelves.",
+        "placement": "Events calendar background or tasting journal visual"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1771154767182-d91ed5106636?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2MzR8MHwxfHNlYXJjaHwyfHxwcmVtaXVtJTIwd2hpc2tleSUyMHNwaXJpdHMlMjBiYXJyZWx8ZW58MHx8fHwxNzc0NzI5Nzg4fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Rows of whiskey barrels in cellar",
+        "placement": "Partner inquiry / BizDev form section"
+      }
+    ]
+  },
+  "specific_pages": {
+    "home": "Dark moody hero with heavy abstract gold/black background (use bg-black/60 overlay to ensure text readability). Serif H1 text-5xl to text-7xl fluid. Featured tasting kits in asymmetrical bento grid.",
+    "events": "Clean calendar layout using Shadcn, dark theme. Event cards with dark imagery, high contrast gold accent for dates.",
+    "foxhound_packs": "Community groups page. Imagery of people tasting. Use slightly softer borders and avatar clusters.",
+    "profile_journal": "Personal tasting journal. Use 'Control Room' grid but styled elegantly. Clean forms, high legibility.",
+    "admin": "Purely functional. Use Archetype 4 (Swiss & High Contrast) applied to dark mode. Strict grid, dense data, pure utility."
+  },
+  "instructions_to_main_agent": [
+    "DO NOT USE PLACEHOLDER IMAGES. Strictly use the URLs provided in the media section.",
+    "All interactive elements must have a data-testid attribute in kebab-case.",
+    "Install and use 'lucide-react' for all icons. Keep icon weight light to match serif luxury feel.",
+    "Install Google Fonts 'Playfair Display' and 'Manrope' in index.html or global css.",
+    "Header must use glassmorphism (backdrop-blur-xl bg-[#0a0a0a]/80 border-b border-white/10) and sticky positioning z-50.",
+    "For the 'Coming Soon' features (Live Tasting Room, Bottle Scanner), create elegant disabled/locked state cards with a gold 'Coming Soon' badge.",
+    "Use raw HTML/Tailwind for the landing page marketing sections for asymmetrical layouts, avoid wrapping everything in Shadcn Cards."
+  ]
+}
