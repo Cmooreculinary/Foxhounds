@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/App";
-import { Wine, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+
+const LOGO_URL = "https://customer-assets.emergentagent.com/job_payment-ops-5/artifacts/54034mu4_7550b98c-30de-4cea-a42f-38c89afa251b.png";
 
 function formatError(detail) {
   if (detail == null) return "Something went wrong. Please try again.";
@@ -39,33 +41,35 @@ export default function AuthPages({ mode }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex">
+    <div className="min-h-screen bg-[#0c0a08] flex">
       {/* Left side - branding */}
       <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center"
-        style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1647101734210-ff5d79813069?w=1200)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-        <div className="absolute inset-0 bg-black/70" />
+        style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=1200)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+        <div className="absolute inset-0 bg-[#0c0a08]/75" />
         <div className="relative z-10 px-16 text-center">
-          <Wine className="w-12 h-12 text-[#d4af37] mx-auto mb-6" />
-          <h1 className="font-serif text-5xl text-[#fdfcf0] mb-4">Vine & Barrel</h1>
-          <p className="text-[#a1a1aa] text-lg font-sans">America's Premier Tasting Platform</p>
+          <img src={LOGO_URL} alt="Foxhounds" className="w-32 h-32 mx-auto mb-8 rounded-full shadow-2xl" />
+          <h1 className="font-serif text-4xl text-[#f5f0e8] mb-2">Foxhounds</h1>
+          <p className="text-[#c9a44a] text-sm font-sans font-semibold tracking-[0.15em] uppercase">Wine & Craft Beer Social</p>
+          <p className="text-[#b5a99a] text-base font-sans mt-4 max-w-sm mx-auto">Where the best people come to taste, connect, and celebrate great drinks together.</p>
         </div>
       </div>
 
       {/* Right side - form */}
       <div className="flex-1 flex items-center justify-center px-8 py-12">
         <div className="w-full max-w-md">
-          <div className="lg:hidden flex items-center gap-2 mb-12 justify-center">
-            <Wine className="w-6 h-6 text-[#d4af37]" />
-            <span className="font-serif text-2xl text-[#fdfcf0]">Vine & Barrel</span>
+          <div className="lg:hidden flex flex-col items-center mb-10">
+            <img src={LOGO_URL} alt="Foxhounds" className="w-20 h-20 rounded-full mb-4" />
+            <span className="font-serif text-2xl text-[#f5f0e8]">Foxhounds</span>
+            <span className="text-[#c9a44a] text-xs font-sans font-semibold tracking-[0.12em] uppercase">Wine & Craft Beer Social</span>
           </div>
 
-          <div className="overline mb-3">{mode === "login" ? "Welcome back" : "Join the club"}</div>
-          <h2 className="font-serif text-3xl text-[#fdfcf0] mb-8">
-            {mode === "login" ? "Sign In" : "Create Account"}
+          <div className="overline mb-3">{mode === "login" ? "Welcome back, friend" : "Join the pack"}</div>
+          <h2 className="font-serif text-3xl text-[#f5f0e8] mb-8">
+            {mode === "login" ? "Sign In" : "Create Your Account"}
           </h2>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-sans" data-testid="auth-error">
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm font-sans" data-testid="auth-error">
               {error}
             </div>
           )}
@@ -73,32 +77,32 @@ export default function AuthPages({ mode }) {
           <form onSubmit={handleSubmit} className="space-y-5" data-testid="auth-form">
             {mode === "register" && (
               <div>
-                <label className="block text-xs font-sans text-[#a1a1aa] mb-2 uppercase tracking-wider">Full Name</label>
+                <label className="block text-xs font-sans text-[#b5a99a] mb-2 uppercase tracking-wider">Your Name</label>
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-                  className="vb-input" placeholder="Your full name" required data-testid="register-name-input" />
+                  className="fh-input" placeholder="What should we call you?" required data-testid="register-name-input" />
               </div>
             )}
             <div>
-              <label className="block text-xs font-sans text-[#a1a1aa] mb-2 uppercase tracking-wider">Email</label>
+              <label className="block text-xs font-sans text-[#b5a99a] mb-2 uppercase tracking-wider">Email</label>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                className="vb-input" placeholder="you@example.com" required data-testid="auth-email-input" />
+                className="fh-input" placeholder="you@example.com" required data-testid="auth-email-input" />
             </div>
             <div>
-              <label className="block text-xs font-sans text-[#a1a1aa] mb-2 uppercase tracking-wider">Password</label>
+              <label className="block text-xs font-sans text-[#b5a99a] mb-2 uppercase tracking-wider">Password</label>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                className="vb-input" placeholder="Enter your password" required data-testid="auth-password-input" />
+                className="fh-input" placeholder="Enter your password" required data-testid="auth-password-input" />
             </div>
-            <button type="submit" disabled={loading} className="btn-gold w-full flex items-center justify-center gap-2 mt-8" data-testid="auth-submit-btn">
-              {loading ? "Please wait..." : mode === "login" ? "Sign In" : "Create Account"}
+            <button type="submit" disabled={loading} className="btn-amber w-full flex items-center justify-center gap-2 mt-8" data-testid="auth-submit-btn">
+              {loading ? "One moment..." : mode === "login" ? "Sign In" : "Join the Pack"}
               {!loading && <ArrowRight className="w-4 h-4" />}
             </button>
           </form>
 
-          <p className="mt-8 text-center text-sm text-[#71717a] font-sans">
+          <p className="mt-8 text-center text-sm text-[#7a7068] font-sans">
             {mode === "login" ? (
-              <>Don't have an account? <Link to="/register" className="text-[#d4af37] hover:underline" data-testid="switch-to-register">Join now</Link></>
+              <>New here? <Link to="/register" className="text-[#c9a44a] hover:underline" data-testid="switch-to-register">Join the pack</Link></>
             ) : (
-              <>Already a member? <Link to="/login" className="text-[#d4af37] hover:underline" data-testid="switch-to-login">Sign in</Link></>
+              <>Already a Foxhound? <Link to="/login" className="text-[#c9a44a] hover:underline" data-testid="switch-to-login">Sign in</Link></>
             )}
           </p>
         </div>

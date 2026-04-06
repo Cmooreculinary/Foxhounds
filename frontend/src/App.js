@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import axios from "axios";
 import "./index.css";
 import Layout from "@/components/Layout";
@@ -15,10 +15,8 @@ import AuthPages from "@/components/AuthPages";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-// Configure axios defaults
 axios.defaults.withCredentials = true;
 
-// Auth Context
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
 
@@ -65,7 +63,7 @@ function AuthProvider({ children }) {
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="text-[var(--vb-gold)] overline">Loading...</div></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#0c0a08]"><div className="overline">Loading...</div></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (adminOnly && user.role !== "admin") return <Navigate to="/" replace />;
   return children;

@@ -129,6 +129,8 @@ class JournalEntryCreate(BaseModel):
     tannins: Optional[str] = "Moderate"
     finish: Optional[str] = "Medium"
     notes: Optional[str] = None
+    rating: Optional[int] = None
+    category: Optional[str] = "wine"
     image_url: Optional[str] = None
 
 class PartnerInquiryCreate(BaseModel):
@@ -144,6 +146,14 @@ class PartnerInquiryCreate(BaseModel):
 class CheckoutRequest(BaseModel):
     plan_id: str
     origin_url: str
+
+class CheckInCreate(BaseModel):
+    venue_name: str
+    drink_name: str
+    category: str = "wine"
+    rating: Optional[int] = None
+    note: Optional[str] = None
+    photo_url: Optional[str] = None
 
 # ============== AUTH ENDPOINTS ==============
 
@@ -163,9 +173,12 @@ async def register(req: RegisterRequest, response: Response):
         "created_at": datetime.now(timezone.utc).isoformat(),
         "location": "",
         "bio": "",
-        "tastings_count": 0,
-        "connections_count": 0,
+        "avatar_emoji": "fox",
+        "checkins_count": 0,
+        "friends_count": 0,
         "packs_count": 0,
+        "favorite_wine": "",
+        "favorite_beer": "",
     }
     result = await db.users.insert_one(user_doc)
     user_id = str(result.inserted_id)
@@ -180,7 +193,6 @@ async def login(req: LoginRequest, request: Request, response: Response):
     email = req.email.lower().strip()
     ip = request.client.host if request.client else "unknown"
     identifier = f"{ip}:{email}"
-    # Brute force check
     attempt = await db.login_attempts.find_one({"identifier": identifier})
     if attempt and attempt.get("count", 0) >= 5:
         lockout_until = attempt.get("locked_until")
@@ -373,6 +385,7 @@ async def create_journal_entry(entry: JournalEntryCreate, request: Request):
     doc = entry.model_dump()
     doc["id"] = str(uuid.uuid4())
     doc["user_id"] = user["_id"]
+    doc["user_name"] = user.get("name", "Anonymous")
     doc["created_at"] = datetime.now(timezone.utc).isoformat()
     await db.journal.insert_one(doc)
     doc.pop("_id", None)
@@ -385,6 +398,41 @@ async def delete_journal_entry(entry_id: str, request: Request):
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Entry not found")
     return {"message": "Deleted"}
+
+# ============== SOCIAL CHECK-INS ==============
+
+@api_router.post("/checkins")
+async def create_checkin(checkin: CheckInCreate, request: Request):
+    user = await get_current_user(request)
+    doc = checkin.model_dump()
+    doc["id"] = str(uuid.uuid4())
+    doc["user_id"] = user["_id"]
+    doc["user_name"] = user.get("name", "Anonymous")
+    doc["likes"] = []
+    doc["likes_count"] = 0
+    doc["created_at"] = datetime.now(timezone.utc).isoformat()
+    await db.checkins.insert_one(doc)
+    await db.users.update_one({"_id": ObjectId(user["_id"])}, {"$inc": {"checkins_count": 1}})
+    doc.pop("_id", None)
+    return doc
+
+@api_router.get("/checkins")
+async def get_checkins():
+    checkins = await db.checkins.find({}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    return checkins
+
+@api_router.post("/checkins/{checkin_id}/like")
+async def like_checkin(checkin_id: str, request: Request):
+    user = await get_current_user(request)
+    checkin = await db.checkins.find_one({"id": checkin_id})
+    if not checkin:
+        raise HTTPException(status_code=404, detail="Check-in not found")
+    if user["_id"] in checkin.get("likes", []):
+        await db.checkins.update_one({"id": checkin_id}, {"$pull": {"likes": user["_id"]}, "$inc": {"likes_count": -1}})
+        return {"message": "Unliked", "liked": False}
+    else:
+        await db.checkins.update_one({"id": checkin_id}, {"$push": {"likes": user["_id"]}, "$inc": {"likes_count": 1}})
+        return {"message": "Liked", "liked": True}
 
 # ============== PARTNER INQUIRIES ==============
 
@@ -419,9 +467,9 @@ async def update_inquiry_status(inquiry_id: str, request: Request):
 # ============== MEMBERSHIP / STRIPE ==============
 
 MEMBERSHIP_PLANS = {
-    "enthusiast_monthly": {"name": "Enthusiast Monthly", "price": 9.99, "interval": "month"},
-    "connoisseur_monthly": {"name": "Connoisseur Monthly", "price": 24.99, "interval": "month"},
-    "sommelier_annual": {"name": "Sommelier Annual", "price": 199.99, "interval": "year"},
+    "social_monthly": {"name": "Social Sipper", "price": 9.99, "interval": "month"},
+    "packleader_monthly": {"name": "Pack Leader", "price": 24.99, "interval": "month"},
+    "foxhound_annual": {"name": "Foxhound Elite", "price": 199.99, "interval": "year"},
 }
 
 @api_router.get("/membership/plans")
@@ -460,7 +508,6 @@ async def create_membership_checkout(req: CheckoutRequest, request: Request):
     )
     session: CheckoutSessionResponse = await stripe_checkout.create_checkout_session(checkout_req)
 
-    # Record transaction
     await db.payment_transactions.insert_one({
         "id": str(uuid.uuid4()),
         "session_id": session.session_id,
@@ -485,14 +532,12 @@ async def get_checkout_status(session_id: str, request: Request):
 
     status: CheckoutStatusResponse = await stripe_checkout.get_checkout_status(session_id)
 
-    # Update transaction
     txn = await db.payment_transactions.find_one({"session_id": session_id})
     if txn and txn.get("payment_status") != "paid":
         await db.payment_transactions.update_one(
             {"session_id": session_id},
             {"$set": {"payment_status": status.payment_status, "status": status.status}}
         )
-        # If paid, update user membership
         if status.payment_status == "paid":
             plan_id = status.metadata.get("plan_id", "") if status.metadata else ""
             user_id = status.metadata.get("user_id", "") if status.metadata else ""
@@ -549,6 +594,7 @@ async def get_admin_stats(request: Request):
     events_count = await db.events.count_documents({})
     kits_count = await db.tasting_kits.count_documents({})
     packs_count = await db.packs.count_documents({})
+    checkins_count = await db.checkins.count_documents({})
     inquiries_count = await db.partner_inquiries.count_documents({"status": "pending"})
     transactions = await db.payment_transactions.find({"payment_status": "paid"}, {"_id": 0}).to_list(1000)
     total_revenue = sum(t.get("amount", 0) for t in transactions)
@@ -557,6 +603,7 @@ async def get_admin_stats(request: Request):
         "events": events_count,
         "kits": kits_count,
         "packs": packs_count,
+        "checkins": checkins_count,
         "pending_inquiries": inquiries_count,
         "total_revenue": total_revenue,
         "total_transactions": len(transactions),
@@ -575,43 +622,65 @@ async def get_admin_users(request: Request):
 # ============== SEED DATA ==============
 
 async def seed_admin():
-    admin_email = os.environ.get("ADMIN_EMAIL", "admin@vineandbarrel.com")
+    admin_email = os.environ.get("ADMIN_EMAIL", "admin@foxhounds.social")
     admin_password = os.environ.get("ADMIN_PASSWORD", "VineBarrel2026!")
     existing = await db.users.find_one({"email": admin_email})
     if existing is None:
         hashed = hash_password(admin_password)
         await db.users.insert_one({
-            "email": admin_email, "password_hash": hashed, "name": "Admin",
-            "role": "admin", "membership": "sommelier_annual",
+            "email": admin_email, "password_hash": hashed, "name": "The Fox",
+            "role": "admin", "membership": "foxhound_annual",
             "created_at": datetime.now(timezone.utc).isoformat(),
-            "location": "Napa Valley, CA", "bio": "Platform administrator",
-            "tastings_count": 47, "connections_count": 12, "packs_count": 3,
+            "location": "Charlottesville, VA", "bio": "Head of the Pack",
+            "avatar_emoji": "fox",
+            "checkins_count": 47, "friends_count": 128, "packs_count": 5,
+            "favorite_wine": "Pinot Noir", "favorite_beer": "Hazy IPA",
         })
     elif not verify_password(admin_password, existing["password_hash"]):
         await db.users.update_one({"email": admin_email}, {"$set": {"password_hash": hash_password(admin_password)}})
 
 async def seed_data():
+    # Clear old seed data and re-seed with new brand
+    if await db.tasting_kits.count_documents({}) > 0:
+        # Check if we have the new brand data
+        existing = await db.tasting_kits.find_one({"category": "craft_beer"})
+        if not existing:
+            await db.tasting_kits.delete_many({})
+            await db.events.delete_many({})
+            await db.packs.delete_many({})
+            await db.checkins.delete_many({})
+
     # Seed tasting kits
     if await db.tasting_kits.count_documents({}) == 0:
         kits = [
-            {"id": str(uuid.uuid4()), "name": "Estate Reserve Collection", "region": "Napa Valley",
+            {"id": str(uuid.uuid4()), "name": "Napa Valley Estate Collection", "region": "Napa Valley, CA",
              "description": "Three exceptional estate wines from Napa's most celebrated vineyards. Includes a 2019 Cabernet Sauvignon, 2020 Chardonnay, and 2018 Merlot Reserve.",
              "price": 185.00, "category": "wine",
              "image_url": "https://images.pexels.com/photos/34335270/pexels-photo-34335270.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
              "created_at": datetime.now(timezone.utc).isoformat()},
-            {"id": str(uuid.uuid4()), "name": "Peated Classics Trio", "region": "Scottish Highlands",
-             "description": "A journey through Scotland's finest peated single malts. Featuring expressions from Islay, Speyside, and Highland distilleries.",
-             "price": 240.00, "category": "spirits",
-             "image_url": "https://images.unsplash.com/photo-1769734416095-30fbc03e7bb7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDJ8MHwxfHNlYXJjaHwxfHx3aGlza2V5JTIwZ2xhc3MlMjBkYXJrJTIwbW9vZHxlbnwwfHx8fDE3NzQ3Mjk4MDR8MA&ixlib=rb-4.1.0&q=85",
+            {"id": str(uuid.uuid4()), "name": "Hazy IPA Discovery Pack", "region": "Pacific Northwest",
+             "description": "Four juicy, haze-forward IPAs from the best craft breweries of Oregon and Washington. Tropical fruit forward with silky smooth finishes.",
+             "price": 65.00, "category": "craft_beer",
+             "image_url": "https://images.unsplash.com/photo-1766589220911-74584516c516?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwxfHxjcmFmdCUyMGJlZXIlMjB0YXN0aW5nJTIwZGFyayUyMG1vb2R5fGVufDB8fHx8MTc3NTUxMzI4NXww&ixlib=rb-4.1.0&q=85",
              "created_at": datetime.now(timezone.utc).isoformat()},
             {"id": str(uuid.uuid4()), "name": "Burgundy Discovery", "region": "Burgundy, France",
              "description": "Explore the terroir of Burgundy with three Pinot Noirs from premier cru vineyards. A masterclass in French winemaking.",
              "price": 210.00, "category": "wine",
              "image_url": "https://images.unsplash.com/photo-1765850257843-aa029ab7769c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjB3aW5lJTIwY2VsbGFyJTIwZGFya3xlbnwwfHx8fDE3NzQ3Mjk4MDJ8MA&ixlib=rb-4.1.0&q=85",
              "created_at": datetime.now(timezone.utc).isoformat()},
-            {"id": str(uuid.uuid4()), "name": "Agave Heritage Collection", "region": "Jalisco, Mexico",
-             "description": "Premium tequila and mezcal expressions. Includes Blanco, Reposado, and a rare Anejo from family-owned distilleries.",
-             "price": 195.00, "category": "spirits",
+            {"id": str(uuid.uuid4()), "name": "Belgian Abbey Classics", "region": "Belgium",
+             "description": "Three iconic Belgian abbey ales — Dubbel, Tripel, and Quad from authentic Trappist breweries. Complex, rich, and centuries of tradition.",
+             "price": 75.00, "category": "craft_beer",
+             "image_url": "https://images.unsplash.com/photo-1766589221620-1a36963db1bd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwzfHxjcmFmdCUyMGJlZXIlMjB0YXN0aW5nJTIwZGFyayUyMG1vb2R5fGVufDB8fHx8MTc3NTUxMzI4NXww&ixlib=rb-4.1.0&q=85",
+             "created_at": datetime.now(timezone.utc).isoformat()},
+            {"id": str(uuid.uuid4()), "name": "Sour & Wild Ale Collection", "region": "Colorado & Vermont",
+             "description": "Four barrel-aged sours and wild ales from America's most innovative craft breweries. Funky, complex, and unforgettable.",
+             "price": 85.00, "category": "craft_beer",
+             "image_url": "https://images.unsplash.com/photo-1766589220939-cf88e4a655cc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwyfHxjcmFmdCUyMGJlZXIlMjB0YXN0aW5nJTIwZGFyayUyMG1vb2R5fGVufDB8fHx8MTc3NTUxMzI4NXww&ixlib=rb-4.1.0&q=85",
+             "created_at": datetime.now(timezone.utc).isoformat()},
+            {"id": str(uuid.uuid4()), "name": "Rosé All Day Sampler", "region": "Provence, France",
+             "description": "Four stunning Provence rosés perfect for sharing. Light, crisp, and absolutely social.",
+             "price": 95.00, "category": "wine",
              "image_url": "https://images.pexels.com/photos/8775199/pexels-photo-8775199.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
              "created_at": datetime.now(timezone.utc).isoformat()},
         ]
@@ -620,25 +689,30 @@ async def seed_data():
     # Seed events
     if await db.events.count_documents({}) == 0:
         events = [
-            {"id": str(uuid.uuid4()), "title": "Napa Meets Tuscany", "description": "Chef Keaveny pairs Napa Cabernets with Tuscan cuisine in this exclusive hybrid tasting.",
-             "venue": "Tavola", "location": "Charlottesville, VA", "date": "2026-02-15", "time": "3:00 PM - 5:00 PM EST",
-             "price": 89.00, "format": "Hybrid", "seats_total": 30, "seats_remaining": 7,
-             "image_url": "https://images.pexels.com/photos/8775199/pexels-photo-8775199.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+            {"id": str(uuid.uuid4()), "title": "Wine & Craft Beer Social Night", "description": "The ultimate crossover event — sommelier meets brewmaster. Compare tannins with hop profiles in this lively social tasting.",
+             "venue": "The Fox Den", "location": "Charlottesville, VA", "date": "2026-02-15", "time": "6:00 PM - 9:00 PM EST",
+             "price": 45.00, "format": "In Person", "seats_total": 60, "seats_remaining": 18,
+             "image_url": "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MjJ8MHwxfHNlYXJjaHwzfHx3aW5lJTIwdGFzdGluZyUyMHNvY2lhbCUyMGdhdGhlcmluZyUyMGZyaWVuZHN8ZW58MHx8fHwxNzc1NTEzMjg1fDA&ixlib=rb-4.1.0&q=85",
              "created_at": datetime.now(timezone.utc).isoformat()},
-            {"id": str(uuid.uuid4()), "title": "Single Malt Masterclass", "description": "Deep dive into the world of single malt Scotch whisky with Master Distiller Ian MacLeod.",
-             "venue": "Copper & Oak", "location": "New York, NY", "date": "2026-02-22", "time": "7:00 PM - 9:00 PM EST",
-             "price": 120.00, "format": "In Person", "seats_total": 25, "seats_remaining": 12,
-             "image_url": "https://images.unsplash.com/photo-1769734416095-30fbc03e7bb7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDJ8MHwxfHNlYXJjaHwxfHx3aGlza2V5JTIwZ2xhc3MlMjBkYXJrJTIwbW9vZHxlbnwwfHx8fDE3NzQ3Mjk4MDR8MA&ixlib=rb-4.1.0&q=85",
+            {"id": str(uuid.uuid4()), "title": "IPA Throwdown: East vs West", "description": "Blind taste test pitting East Coast hazies against West Coast bitters. Bring your friends and pick a side!",
+             "venue": "Brew & Vine Taproom", "location": "Portland, OR", "date": "2026-02-22", "time": "7:00 PM - 10:00 PM PST",
+             "price": 35.00, "format": "In Person", "seats_total": 80, "seats_remaining": 34,
+             "image_url": "https://images.unsplash.com/photo-1766589220911-74584516c516?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwxfHxjcmFmdCUyMGJlZXIlMjB0YXN0aW5nJTIwZGFyayUyMG1vb2R5fGVufDB8fHx8MTc3NTUxMzI4NXww&ixlib=rb-4.1.0&q=85",
              "created_at": datetime.now(timezone.utc).isoformat()},
-            {"id": str(uuid.uuid4()), "title": "Artisanal Gin Workshop", "description": "Learn the art of gin distillation and craft your own botanical blend to take home.",
-             "venue": "Botanist Lounge", "location": "Virtual", "date": "2026-03-05", "time": "6:00 PM - 8:00 PM EST",
-             "price": 65.00, "format": "Virtual", "seats_total": 50, "seats_remaining": 34,
-             "image_url": "https://images.unsplash.com/photo-1765850257843-aa029ab7769c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjB3aW5lJTIwY2VsbGFyJTIwZGFya3xlbnwwfHx8fDE3NzQ3Mjk4MDJ8MA&ixlib=rb-4.1.0&q=85",
+            {"id": str(uuid.uuid4()), "title": "Natural Wine Pop-Up Party", "description": "Join winemakers from 5 natural wine producers for an intimate tasting with live acoustic music and artisan cheese.",
+             "venue": "The Cellar Social", "location": "Brooklyn, NY", "date": "2026-03-05", "time": "5:00 PM - 8:00 PM EST",
+             "price": 55.00, "format": "In Person", "seats_total": 40, "seats_remaining": 12,
+             "image_url": "https://images.unsplash.com/photo-1774684047298-193cd2f986d9?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MjJ8MHwxfHNlYXJjaHwxfHx3aW5lJTIwdGFzdGluZyUyMHNvY2lhbCUyMGdhdGhlcmluZyUyMGZyaWVuZHN8ZW58MHx8fHwxNzc1NTEzMjg1fDA&ixlib=rb-4.1.0&q=85",
              "created_at": datetime.now(timezone.utc).isoformat()},
-            {"id": str(uuid.uuid4()), "title": "Bordeaux Vertical Tasting", "description": "Chateau Latour masterclass spanning five exceptional vintages from 2005 to 2018.",
-             "venue": "The Wine Vault", "location": "San Francisco, CA", "date": "2026-03-15", "time": "2:00 PM - 5:00 PM PST",
-             "price": 145.00, "format": "In Person", "seats_total": 20, "seats_remaining": 5,
-             "image_url": "https://images.pexels.com/photos/34335270/pexels-photo-34335270.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+            {"id": str(uuid.uuid4()), "title": "Stout & Chocolate Pairing Night", "description": "Imperial stouts meet artisan chocolate in this indulgent pairing experience. A perfect date night or friend hangout!",
+             "venue": "Foxhound Lounge", "location": "Austin, TX", "date": "2026-03-15", "time": "7:00 PM - 9:30 PM CST",
+             "price": 50.00, "format": "In Person", "seats_total": 30, "seats_remaining": 8,
+             "image_url": "https://images.unsplash.com/photo-1766589221620-1a36963db1bd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwzfHxjcmFmdCUyMGJlZXIlMjB0YXN0aW5nJTIwZGFyayUyMG1vb2R5fGVufDB8fHx8MTc3NTUxMzI4NXww&ixlib=rb-4.1.0&q=85",
+             "created_at": datetime.now(timezone.utc).isoformat()},
+            {"id": str(uuid.uuid4()), "title": "Virtual: Rosé & Lager Summer Preview", "description": "Taste along from home! We'll ship the kit, you bring the vibes. Live-hosted with group chat and prizes.",
+             "venue": "Foxhounds Online", "location": "Virtual", "date": "2026-03-20", "time": "8:00 PM - 9:30 PM EST",
+             "price": 30.00, "format": "Virtual", "seats_total": 200, "seats_remaining": 156,
+             "image_url": "https://images.unsplash.com/photo-1770453572726-f51592710ca6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MjJ8MHwxfHNlYXJjaHwyfHx3aW5lJTIwdGFzdGluZyUyMHNvY2lhbCUyMGdhdGhlcmluZyUyMGZyaWVuZHN8ZW58MHx8fHwxNzc1NTEzMjg1fDA&ixlib=rb-4.1.0&q=85",
              "created_at": datetime.now(timezone.utc).isoformat()},
         ]
         await db.events.insert_many(events)
@@ -646,30 +720,60 @@ async def seed_data():
     # Seed packs
     if await db.packs.count_documents({}) == 0:
         packs = [
-            {"id": str(uuid.uuid4()), "name": "The Napa Hounds", "emoji": "fox", "location": "Napa Valley, CA",
-             "member_count": 24, "format": "In-Person + Virtual", "tags": ["Cabernets", "Estate Tours", "Monthly Meets"],
-             "description": "Napa Valley's premier tasting pack. Monthly vineyard visits and quarterly vertical tastings.",
+            {"id": str(uuid.uuid4()), "name": "The Charlottesville Foxes", "emoji": "fox", "location": "Charlottesville, VA",
+             "member_count": 42, "format": "In-Person + Virtual", "tags": ["Wine Bars", "Craft Breweries", "Monthly Socials"],
+             "description": "The OG pack. Weekly meetups at local wine bars and craft breweries. New members always welcome — just bring good vibes.",
              "members": [], "created_at": datetime.now(timezone.utc).isoformat()},
-            {"id": str(uuid.uuid4()), "name": "NYC Barrel Club", "emoji": "tumbler_glass", "location": "Manhattan, NY",
-             "member_count": 41, "format": "In-Person", "tags": ["Bourbon", "Whiskey", "Speakeasies"],
-             "description": "Manhattan's finest spirits enthusiasts. Speakeasy tours and rare bottle shares.",
+            {"id": str(uuid.uuid4()), "name": "Brooklyn Hops & Grapes", "emoji": "beer", "location": "Brooklyn, NY",
+             "member_count": 67, "format": "In-Person", "tags": ["Natural Wine", "IPAs", "Rooftop Parties"],
+             "description": "Brooklyn's best beer and wine crew. Rooftop tastings in summer, cozy bar crawls in winter. Very social, slightly wild.",
              "members": [], "created_at": datetime.now(timezone.utc).isoformat()},
-            {"id": str(uuid.uuid4()), "name": "ATX Sippers", "emoji": "wine_glass", "location": "Austin, TX",
-             "member_count": 18, "format": "Hybrid", "tags": ["Natural Wine", "Patio Sessions"],
-             "description": "Austin's natural wine community. Patio tastings and winemaker meetups.",
+            {"id": str(uuid.uuid4()), "name": "ATX Pour House", "emoji": "wine", "location": "Austin, TX",
+             "member_count": 31, "format": "Hybrid", "tags": ["Patio Sessions", "Live Music", "Texas Wines"],
+             "description": "Wine and craft beer lovers in the ATX. Patio tastings, live music nights, and collaborations with local breweries.",
              "members": [], "created_at": datetime.now(timezone.utc).isoformat()},
-            {"id": str(uuid.uuid4()), "name": "London Cru Circle", "emoji": "gb", "location": "London, UK",
-             "member_count": 32, "format": "Virtual Only", "tags": ["Old World", "Cellaring", "Zoom Tastings"],
-             "description": "Virtual community for Old World wine enthusiasts. Monthly Zoom tastings with UK sommeliers.",
+            {"id": str(uuid.uuid4()), "name": "PNW Craft Collective", "emoji": "hop", "location": "Portland, OR",
+             "member_count": 53, "format": "In-Person", "tags": ["Brewery Tours", "Pinot Noir", "Taproom Crawls"],
+             "description": "Pacific Northwest craft beer and Willamette Valley wine enthusiasts. Monthly brewery tours and winery visits.",
+             "members": [], "created_at": datetime.now(timezone.utc).isoformat()},
+            {"id": str(uuid.uuid4()), "name": "Virtual Foxhounds", "emoji": "globe", "location": "Everywhere",
+             "member_count": 89, "format": "Virtual Only", "tags": ["Zoom Tastings", "Ship-to-Home", "Global Friends"],
+             "description": "Can't make it in person? No problem. We ship the drinks, you join the Zoom. Global community, zero boundaries.",
              "members": [], "created_at": datetime.now(timezone.utc).isoformat()},
         ]
         await db.packs.insert_many(packs)
+
+    # Seed social check-ins
+    if await db.checkins.count_documents({}) == 0:
+        checkins = [
+            {"id": str(uuid.uuid4()), "venue_name": "The Fox Den", "drink_name": "Hazy Little Thing IPA",
+             "category": "craft_beer", "rating": 4, "note": "Perfect haze, tropical vibes. This is my new go-to!",
+             "user_id": "seed", "user_name": "Sarah K.", "likes": [], "likes_count": 12,
+             "created_at": (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()},
+            {"id": str(uuid.uuid4()), "venue_name": "Brew & Vine Taproom", "drink_name": "2021 Willamette Pinot Noir",
+             "category": "wine", "rating": 5, "note": "Silky smooth, cherry and earth. Paired perfectly with the charcuterie board.",
+             "user_id": "seed", "user_name": "Marcus T.", "likes": [], "likes_count": 8,
+             "created_at": (datetime.now(timezone.utc) - timedelta(hours=5)).isoformat()},
+            {"id": str(uuid.uuid4()), "venue_name": "Foxhound Lounge", "drink_name": "Barrel-Aged Imperial Stout",
+             "category": "craft_beer", "rating": 5, "note": "Absolute banger. Chocolate, vanilla, bourbon oak. 13% and dangerous.",
+             "user_id": "seed", "user_name": "Jules W.", "likes": [], "likes_count": 23,
+             "created_at": (datetime.now(timezone.utc) - timedelta(hours=8)).isoformat()},
+            {"id": str(uuid.uuid4()), "venue_name": "The Cellar Social", "drink_name": "Rosé from Provence",
+             "category": "wine", "rating": 4, "note": "Light, crisp, and absolutely perfect for the patio. Friends loved it too!",
+             "user_id": "seed", "user_name": "Ava P.", "likes": [], "likes_count": 15,
+             "created_at": (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()},
+            {"id": str(uuid.uuid4()), "venue_name": "Brooklyn Beer Garden", "drink_name": "Pliny the Elder Double IPA",
+             "category": "craft_beer", "rating": 5, "note": "Finally got my hands on one. Lives up to the hype. Cheers to the pack!",
+             "user_id": "seed", "user_name": "Diego R.", "likes": [], "likes_count": 31,
+             "created_at": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()},
+        ]
+        await db.checkins.insert_many(checkins)
 
 # ============== ROOT / HEALTH ==============
 
 @api_router.get("/")
 async def root():
-    return {"message": "Vine & Barrel API", "status": "operational"}
+    return {"message": "Foxhounds Wine & Craft Beer Social API", "status": "operational"}
 
 # Include router
 app.include_router(api_router)
@@ -693,7 +797,7 @@ async def startup():
     await db.login_attempts.create_index("identifier")
     await seed_admin()
     await seed_data()
-    logger.info("Vine & Barrel API started successfully")
+    logger.info("Foxhounds Wine & Craft Beer Social API started successfully")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

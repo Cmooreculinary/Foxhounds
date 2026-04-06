@@ -3,7 +3,7 @@ import sys
 import json
 from datetime import datetime
 
-class VineBarrelAPITester:
+class FoxhoundsAPITester:
     def __init__(self, base_url="https://payment-ops-5.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
@@ -89,39 +89,59 @@ class VineBarrelAPITester:
         return self.run_test("Logout", "POST", "auth/logout", 200)
 
     def test_get_kits(self):
-        """Test get tasting kits"""
+        """Test get tasting kits - should return 6 kits with wine AND craft_beer categories"""
         success, response = self.run_test("Get Tasting Kits", "GET", "kits", 200)
         if success:
-            print(f"   Found {len(response)} kits")
+            print(f"   Found {len(response)} kits (expected: 6)")
             if response:
                 print(f"   Sample kit: {response[0].get('name', 'Unknown')}")
+                # Check for both wine and craft_beer categories
+                categories = [kit.get('category') for kit in response]
+                wine_kits = len([c for c in categories if c == 'wine'])
+                beer_kits = len([c for c in categories if c == 'craft_beer'])
+                print(f"   Wine kits: {wine_kits}, Craft beer kits: {beer_kits}")
+                if 'craft_beer' in categories:
+                    print("   ✅ Craft beer category found (rebrand successful)")
+                else:
+                    print("   ❌ No craft beer kits found")
         return success
 
     def test_get_events(self):
-        """Test get events"""
+        """Test get events - should return 5 events"""
         success, response = self.run_test("Get Events", "GET", "events", 200)
         if success:
-            print(f"   Found {len(response)} events")
+            print(f"   Found {len(response)} events (expected: 5)")
             if response:
                 print(f"   Sample event: {response[0].get('title', 'Unknown')}")
         return success
 
     def test_get_packs(self):
-        """Test get packs"""
+        """Test get packs - should return 5 packs"""
         success, response = self.run_test("Get Packs", "GET", "packs", 200)
         if success:
-            print(f"   Found {len(response)} packs")
+            print(f"   Found {len(response)} packs (expected: 5)")
             if response:
                 print(f"   Sample pack: {response[0].get('name', 'Unknown')}")
         return success
 
     def test_membership_plans(self):
-        """Test get membership plans"""
+        """Test get membership plans - should include new Foxhounds plan names"""
         success, response = self.run_test("Get Membership Plans", "GET", "membership/plans", 200)
         if success:
             print(f"   Found {len(response)} plans")
+            plan_names = []
             for plan in response:
-                print(f"   Plan: {plan.get('name', 'Unknown')} - ${plan.get('price', 0)}")
+                name = plan.get('name', 'Unknown')
+                plan_names.append(name)
+                print(f"   Plan: {name} - ${plan.get('price', 0)}")
+            
+            # Check for new Foxhounds plan names
+            expected_names = ["Social Sipper", "Pack Leader", "Foxhound Elite"]
+            for expected in expected_names:
+                if expected in plan_names:
+                    print(f"   ✅ Found {expected} plan (rebrand successful)")
+                else:
+                    print(f"   ❌ Missing {expected} plan")
         return success
 
     def test_partner_inquiry(self):
@@ -186,9 +206,51 @@ class VineBarrelAPITester:
         
         return success1 and success2
 
+    def test_checkins_endpoints(self):
+        """Test social check-ins endpoints (new feature)"""
+        # Test get check-ins
+        success1, response1 = self.run_test("Get Check-ins", "GET", "checkins", 200)
+        if success1:
+            print(f"   Found {len(response1)} check-ins (expected: 5)")
+            if response1:
+                print(f"   Sample check-in: {response1[0].get('drink_name', 'Unknown')} at {response1[0].get('venue_name', 'Unknown')}")
+        
+        # Test create check-in
+        checkin_data = {
+            "venue_name": "Test Venue",
+            "drink_name": "Test Beer",
+            "category": "craft_beer",
+            "rating": 4,
+            "note": "Great test beer!"
+        }
+        success2, response2 = self.run_test(
+            "Create Check-in",
+            "POST",
+            "checkins",
+            200,
+            data=checkin_data
+        )
+        if success2:
+            checkin_id = response2.get('id')
+            print(f"   Created check-in ID: {checkin_id}")
+            
+            # Test like check-in
+            if checkin_id:
+                success3, response3 = self.run_test(
+                    "Like Check-in",
+                    "POST",
+                    f"checkins/{checkin_id}/like",
+                    200
+                )
+                if success3:
+                    print(f"   Like result: {response3.get('message', 'Unknown')}")
+                return success1 and success2 and success3
+        
+        return success1 and success2
+
 def main():
-    print("🍷 Starting Vine & Barrel API Tests...")
-    tester = VineBarrelAPITester()
+    print("🦊 Starting Foxhounds Wine & Craft Beer Social API Tests...")
+    tester = FoxhoundsAPITester()
     
     # Test basic endpoints (no auth required)
     print("\n" + "="*50)
@@ -219,6 +281,7 @@ def main():
         
         tester.test_auth_me()
         tester.test_journal_endpoints()
+        tester.test_checkins_endpoints()  # New social feature
         tester.test_admin_stats()
         tester.test_admin_users()
         
