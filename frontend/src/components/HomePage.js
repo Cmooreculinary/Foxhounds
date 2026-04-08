@@ -86,7 +86,7 @@ export default function HomePage() {
               </div>
             </div>
             <div className="hidden lg:block animate-fade-in animate-delay-3">
-              <img src={LOGO_URL} alt="Foxhounds" className="w-72 h-72 drop-shadow-2xl" />
+              <img src={LOGO_URL} alt="Foxhounds" className="w-[520px] h-[520px] drop-shadow-2xl" />
             </div>
           </div>
         </div>
