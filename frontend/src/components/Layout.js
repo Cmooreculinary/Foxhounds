@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Calendar, Users, User, Handshake, Shield, Crown, LogOut, Menu, X, Newspaper } from "lucide-react";
 
-const LOGO_URL = "https://customer-assets.emergentagent.com/job_payment-ops-5/artifacts/54034mu4_7550b98c-30de-4cea-a42f-38c89afa251b.png";
+const LOGO_URL = "/foxhounds-logo.png";
 
 const NAV_ITEMS = [
   { path: "/", label: "Home", icon: Newspaper },

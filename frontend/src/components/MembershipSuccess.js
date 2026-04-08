@@ -4,7 +4,7 @@ import axios from "axios";
 import { API } from "@/App";
 import { CheckCircle, Loader2, XCircle } from "lucide-react";
 
-const LOGO_URL = "https://customer-assets.emergentagent.com/job_payment-ops-5/artifacts/54034mu4_7550b98c-30de-4cea-a42f-38c89afa251b.png";
+const LOGO_URL = "/foxhounds-logo.png";
 
 export default function MembershipSuccess() {
   const [searchParams] = useSearchParams();
@@ -42,7 +42,7 @@ export default function MembershipSuccess() {
         )}
         {status === "success" && (
           <div className="animate-fade-in">
-            <img src={LOGO_URL} alt="Foxhounds" className="w-24 h-24 rounded-full mx-auto mb-6 border-2 border-[#c9a44a]/30" />
+            <img src={LOGO_URL} alt="Foxhounds" className="w-24 h-24 mx-auto mb-6 drop-shadow-xl" />
             <h2 className="font-serif text-3xl text-[#f5f0e8] mb-4">Welcome to the Pack!</h2>
             <p className="text-[#b5a99a] font-sans mb-8">Your Foxhounds membership is now active. Time to explore, taste, and socialize!</p>
             <Link to="/" className="btn-amber" data-testid="success-home-btn">Explore Now</Link>

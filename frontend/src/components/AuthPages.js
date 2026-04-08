@@ -3,7 +3,7 @@ import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { ArrowRight } from "lucide-react";
 
-const LOGO_URL = "https://customer-assets.emergentagent.com/job_payment-ops-5/artifacts/54034mu4_7550b98c-30de-4cea-a42f-38c89afa251b.png";
+const LOGO_URL = "/foxhounds-logo.png";
 
 function formatError(detail) {
   if (detail == null) return "Something went wrong. Please try again.";
@@ -47,7 +47,7 @@ export default function AuthPages({ mode }) {
         style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=1200)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
         <div className="absolute inset-0 bg-[#0c0a08]/75" />
         <div className="relative z-10 px-16 text-center">
-          <img src={LOGO_URL} alt="Foxhounds" className="w-32 h-32 mx-auto mb-8 rounded-full shadow-2xl" />
+          <img src={LOGO_URL} alt="Foxhounds" className="w-32 h-32 mx-auto mb-8 drop-shadow-2xl" />
           <h1 className="font-serif text-4xl text-[#f5f0e8] mb-2">Foxhounds</h1>
           <p className="text-[#c9a44a] text-sm font-sans font-semibold tracking-[0.15em] uppercase">Wine & Craft Beer Social</p>
           <p className="text-[#b5a99a] text-base font-sans mt-4 max-w-sm mx-auto">Where the best people come to taste, connect, and celebrate great drinks together.</p>
@@ -58,7 +58,7 @@ export default function AuthPages({ mode }) {
       <div className="flex-1 flex items-center justify-center px-8 py-12">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex flex-col items-center mb-10">
-            <img src={LOGO_URL} alt="Foxhounds" className="w-20 h-20 rounded-full mb-4" />
+            <img src={LOGO_URL} alt="Foxhounds" className="w-20 h-20 mb-4 drop-shadow-xl" />
             <span className="font-serif text-2xl text-[#f5f0e8]">Foxhounds</span>
             <span className="text-[#c9a44a] text-xs font-sans font-semibold tracking-[0.12em] uppercase">Wine & Craft Beer Social</span>
           </div>

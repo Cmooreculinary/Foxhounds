@@ -4,7 +4,7 @@ import axios from "axios";
 import { API, useAuth } from "@/App";
 import { ArrowRight, Calendar, Users, MapPin, Clock, Star, Heart, MessageCircle, Beer, Wine, Sparkles, Radio, Scan } from "lucide-react";
 
-const LOGO_URL = "https://customer-assets.emergentagent.com/job_payment-ops-5/artifacts/54034mu4_7550b98c-30de-4cea-a42f-38c89afa251b.png";
+const LOGO_URL = "/foxhounds-logo.png";
 
 function StarRating({ rating }) {
   return (
@@ -86,7 +86,7 @@ export default function HomePage() {
               </div>
             </div>
             <div className="hidden lg:block animate-fade-in animate-delay-3">
-              <img src={LOGO_URL} alt="Foxhounds" className="w-72 h-72 rounded-full shadow-2xl border-4 border-[#c9a44a]/20" />
+              <img src={LOGO_URL} alt="Foxhounds" className="w-72 h-72 drop-shadow-2xl" />
             </div>
           </div>
         </div>
@@ -284,7 +284,7 @@ export default function HomePage() {
       {/* CTA */}
       <section className="py-24 px-6 bg-[#161210]" data-testid="cta-section">
         <div className="max-w-3xl mx-auto text-center">
-          <img src={LOGO_URL} alt="Foxhounds" className="w-24 h-24 rounded-full mx-auto mb-8 border-2 border-[#c9a44a]/20" />
+          <img src={LOGO_URL} alt="Foxhounds" className="w-24 h-24 mx-auto mb-8 drop-shadow-xl" />
           <h2 className="font-serif text-4xl md:text-5xl text-[#f5f0e8] mb-6">
             Ready to join the <em className="text-warm-gradient">pack</em>?
           </h2>
