@@ -55,18 +55,18 @@ export default function PacksPage() {
           {filtered.map((pack, i) => (
             <div key={pack.id} className="fh-card p-6" data-testid={`pack-item-${i}`}>
               <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-full bg-[#c9a44a]/10 border border-[#c9a44a]/20 flex items-center justify-center">
-                    <Users className="w-6 h-6 text-[#c9a44a]" />
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#c9a44a]/10 border border-[#c9a44a]/20 flex items-center justify-center flex-shrink-0">
+                    <Users className="w-5 h-5 md:w-6 md:h-6 text-[#c9a44a]" />
                   </div>
-                  <div>
-                    <h3 className="font-serif text-xl text-[#f5f0e8]">{pack.name}</h3>
-                    <p className="text-[#7a7068] text-sm font-sans flex items-center gap-1">
-                      <span>{pack.member_count} members</span> · <MapPin className="w-3 h-3" /> {pack.location}
+                  <div className="min-w-0">
+                    <h3 className="font-serif text-lg md:text-xl text-[#f5f0e8] truncate">{pack.name}</h3>
+                    <p className="text-[#7a7068] text-xs md:text-sm font-sans flex items-center gap-1 truncate">
+                      <span>{pack.member_count} members</span> · <MapPin className="w-3 h-3 flex-shrink-0" /> <span className="truncate">{pack.location}</span>
                     </p>
                   </div>
                 </div>
-                <span className="badge-amber">{pack.format}</span>
+                <span className="badge-amber flex-shrink-0 ml-2">{pack.format}</span>
               </div>
 
               {pack.description && (

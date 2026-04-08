@@ -69,6 +69,10 @@ export default function HomePage() {
         <div className="relative z-10 max-w-7xl mx-auto px-6 py-24 w-full">
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="flex-1 animate-fade-in">
+              {/* Mobile logo */}
+              <div className="lg:hidden mb-8 animate-fade-in animate-delay-1">
+                <img src={LOGO_URL} alt="Foxhounds" className="w-36 h-36 drop-shadow-xl" />
+              </div>
               <div className="overline mb-6 animate-fade-in animate-delay-1">Wine & Craft Beer Social</div>
               <h1 className="font-serif text-5xl md:text-7xl text-[#f5f0e8] leading-[1.1] mb-6 animate-fade-in animate-delay-2">
                 Where excellent wine and great craft beers meet the <em className="text-warm-gradient">best people</em>
