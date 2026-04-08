@@ -71,7 +71,7 @@ export default function HomePage() {
             <div className="flex-1 animate-fade-in">
               <div className="overline mb-6 animate-fade-in animate-delay-1">Wine & Craft Beer Social</div>
               <h1 className="font-serif text-5xl md:text-7xl text-[#f5f0e8] leading-[1.1] mb-6 animate-fade-in animate-delay-2">
-                Where great drinks meet <em className="text-warm-gradient">great people</em>
+                Where excellent wine and great craft beers meet the <em className="text-warm-gradient">best people</em>
               </h1>
               <p className="text-[#b5a99a] text-lg md:text-xl font-sans mb-10 max-w-xl leading-relaxed animate-fade-in animate-delay-3">
                 Join the Foxhounds — a social community of wine lovers and craft beer enthusiasts. Taste together, learn together, celebrate together.
