@@ -11,7 +11,7 @@ Verify: bcrypt hash starts with `$2b$`, indexes exist on users.email (unique), l
 
 ## Step 2: API Testing
 ```
-API_URL=https://payment-ops-5.preview.emergentagent.com
+API_URL=https://foxhounds-refactor.preview.emergentagent.com
 curl -c cookies.txt -X POST "$API_URL/api/auth/login" -H "Content-Type: application/json" -d '{"email":"admin@vineandbarrel.com","password":"VineBarrel2026!"}'
 cat cookies.txt
 curl -b cookies.txt "$API_URL/api/auth/me"

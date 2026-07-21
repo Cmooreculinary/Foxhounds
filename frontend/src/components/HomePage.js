@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { API, useAuth } from "@/App";
 import { ArrowRight, Calendar, Users, MapPin, Clock, Star, Heart, MessageCircle, Beer, Wine, Sparkles, Radio, Scan } from "lucide-react";
 
 const LOGO_URL = "/foxhounds-logo.png";
+
+const SECONDS_PER_MINUTE = 60;
+const SECONDS_PER_HOUR = 3600;
+const SECONDS_PER_DAY = 86400;
 
 function StarRating({ rating }) {
   return (
@@ -20,9 +24,9 @@ function TimeAgo({ date }) {
   const now = new Date();
   const d = new Date(date);
   const diff = Math.floor((now - d) / 1000);
-  if (diff < 3600) return <span>{Math.floor(diff / 60)}m ago</span>;
-  if (diff < 86400) return <span>{Math.floor(diff / 3600)}h ago</span>;
-  return <span>{Math.floor(diff / 86400)}d ago</span>;
+  if (diff < SECONDS_PER_HOUR) return <span>{Math.floor(diff / SECONDS_PER_MINUTE)}m ago</span>;
+  if (diff < SECONDS_PER_DAY) return <span>{Math.floor(diff / SECONDS_PER_HOUR)}h ago</span>;
+  return <span>{Math.floor(diff / SECONDS_PER_DAY)}d ago</span>;
 }
 
 function AvatarBubble({ name, className = "" }) {
@@ -42,20 +46,30 @@ export default function HomePage() {
   const [packs, setPacks] = useState([]);
   const [checkins, setCheckins] = useState([]);
 
-  useEffect(() => {
-    axios.get(`${API}/kits`).then(r => setKits(r.data)).catch(() => {});
-    axios.get(`${API}/events`).then(r => setEvents(r.data.slice(0, 3))).catch(() => {});
-    axios.get(`${API}/packs`).then(r => setPacks(r.data.slice(0, 3))).catch(() => {});
-    axios.get(`${API}/checkins`).then(r => setCheckins(r.data)).catch(() => {});
+  const loadCheckins = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API}/checkins`);
+      setCheckins(res.data);
+    } catch (err) {
+      setCheckins([]);
+    }
   }, []);
+
+  useEffect(() => {
+    axios.get(`${API}/kits`).then(res => setKits(res.data)).catch(() => setKits([]));
+    axios.get(`${API}/events`).then(res => setEvents(res.data.slice(0, 3))).catch(() => setEvents([]));
+    axios.get(`${API}/packs`).then(res => setPacks(res.data.slice(0, 3))).catch(() => setPacks([]));
+    loadCheckins();
+  }, [loadCheckins]);
 
   const handleLike = async (checkinId) => {
     if (!user) return;
     try {
       await axios.post(`${API}/checkins/${checkinId}/like`);
-      const r = await axios.get(`${API}/checkins`);
-      setCheckins(r.data);
-    } catch {}
+      loadCheckins();
+    } catch (err) {
+      // Silently ignore like failures — non-critical interaction
+    }
   };
 
   return (

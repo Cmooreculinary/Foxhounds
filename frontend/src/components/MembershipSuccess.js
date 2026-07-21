@@ -1,34 +1,39 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import axios from "axios";
 import { API } from "@/App";
 import { CheckCircle, Loader2, XCircle } from "lucide-react";
 
 const LOGO_URL = "/foxhounds-logo.png";
+const MAX_POLL_ATTEMPTS = 5;
+const POLL_INTERVAL_MS = 2000;
 
 export default function MembershipSuccess() {
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session_id");
   const [status, setStatus] = useState("checking");
   const [attempts, setAttempts] = useState(0);
+  const pollingRef = useRef(false);
+
+  const pollStatus = useCallback(async (attempt) => {
+    if (attempt >= MAX_POLL_ATTEMPTS) { setStatus("timeout"); return; }
+    try {
+      const res = await axios.get(`${API}/membership/status/${sessionId}`);
+      if (res.data.payment_status === "paid") { setStatus("success"); return; }
+      if (res.data.status === "expired") { setStatus("expired"); return; }
+      setAttempts(attempt + 1);
+      setTimeout(() => pollStatus(attempt + 1), POLL_INTERVAL_MS);
+    } catch {
+      setStatus("error");
+    }
+  }, [sessionId]);
 
   useEffect(() => {
     if (!sessionId) { setStatus("error"); return; }
-    const maxAttempts = 5;
-    const poll = async (attempt) => {
-      if (attempt >= maxAttempts) { setStatus("timeout"); return; }
-      try {
-        const { data } = await axios.get(`${API}/membership/status/${sessionId}`);
-        if (data.payment_status === "paid") { setStatus("success"); return; }
-        if (data.status === "expired") { setStatus("expired"); return; }
-        setAttempts(attempt + 1);
-        setTimeout(() => poll(attempt + 1), 2000);
-      } catch {
-        setStatus("error");
-      }
-    };
-    poll(0);
-  }, [sessionId]);
+    if (pollingRef.current) return;
+    pollingRef.current = true;
+    pollStatus(0);
+  }, [sessionId, pollStatus]);
 
   return (
     <div className="py-24 px-6" data-testid="membership-success-page">
